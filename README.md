@@ -154,4 +154,4 @@ smartpark/
 
 ## 📄 Lisensi
 
-Project ini dibuat untuk keperluan portofolio.
+Project ini dibuat oleh Aljudika Riziq Juhansyah.
