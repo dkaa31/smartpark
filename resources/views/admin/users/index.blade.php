@@ -110,7 +110,7 @@
     @if($users->hasPages())
     <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
         <span style="font-size:.8rem;color:#6b7280;">Menampilkan {{ $users->firstItem() }}–{{ $users->lastItem() }} dari {{ $users->total() }} user</span>
-        {{ $users->links() }}
+        {{ $users->links('vendor.pagination.simple-custom') }}
     </div>
     @endif
 </div>

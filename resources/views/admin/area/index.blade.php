@@ -116,7 +116,7 @@
     @if($areas->hasPages())
     <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
         <span style="font-size:.8rem;color:#6b7280;">Menampilkan {{ $areas->firstItem() }}–{{ $areas->lastItem() }} dari {{ $areas->total() }} area</span>
-        {{ $areas->links() }}
+        {{ $areas->links('vendor.pagination.simple-custom') }}
     </div>
     @endif
 </div>

@@ -89,7 +89,7 @@
     @if($logs->hasPages())
     <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
         <span style="font-size:.8rem;color:#6b7280;">Menampilkan {{ $logs->firstItem() }}–{{ $logs->lastItem() }} dari {{ $logs->total() }} log</span>
-        {{ $logs->links() }}
+        {{ $logs->links('vendor.pagination.simple-custom') }}
     </div>
     @endif
 </div>

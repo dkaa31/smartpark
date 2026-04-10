@@ -95,7 +95,7 @@
     @if($transaksiMasuk->hasPages())
     <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
         <span style="font-size:.8rem;color:#6b7280;">{{ $transaksiMasuk->total() }} kendaraan sedang parkir</span>
-        {{ $transaksiMasuk->links() }}
+        {{ $transaksiMasuk->links('vendor.pagination.simple-custom') }}
     </div>
     @endif
 </div>

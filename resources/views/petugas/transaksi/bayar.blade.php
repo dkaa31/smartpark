@@ -58,6 +58,11 @@
                     <div id="totalBiaya" style="font-size:2rem;font-weight:700;color:#1e3a8a;">
                         Rp {{ number_format($biaya, 0, ',', '.') }}
                     </div>
+                    <div style="font-size:.72rem;color:#6b7280;margin-top:2px;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Maks. Rp {{ number_format($capHarian, 0, ',', '.') }}/hari
+                        ({{ $durasi }} jam parkir)
+                    </div>
                 </div>
 
                 <form action="{{ route('petugas.transaksi.bayar', $transaksi->id) }}" method="POST" id="formBayar">

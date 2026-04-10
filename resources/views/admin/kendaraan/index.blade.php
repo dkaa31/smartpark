@@ -96,7 +96,7 @@
     @if($kendaraan->hasPages())
     <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
         <span style="font-size:.8rem;color:#6b7280;">Menampilkan {{ $kendaraan->firstItem() }}–{{ $kendaraan->lastItem() }} dari {{ $kendaraan->total() }} kendaraan</span>
-        {{ $kendaraan->links() }}
+        {{ $kendaraan->links('vendor.pagination.simple-custom') }}
     </div>
     @endif
 </div>

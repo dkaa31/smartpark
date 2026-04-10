@@ -11,6 +11,7 @@ use App\Models\TbLogAktivitas;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Helpers\QrHelper;
+use App\Helpers\BiayaHelper;
 
 class TransaksiController extends Controller
 {
@@ -121,8 +122,8 @@ class TransaksiController extends Controller
         }
 
         $waktuKeluar = now();
-        $durasi      = max(1, ceil($transaksi->waktu_masuk->diffInMinutes($waktuKeluar) / 60));
-        $biaya       = $durasi * $transaksi->tarif->tarif_per_jam;
+        $durasi      = BiayaHelper::hitungDurasi($transaksi->waktu_masuk, $waktuKeluar);
+        $biaya       = BiayaHelper::hitungBiaya($durasi, $transaksi->tarif->tarif_per_jam);
 
         // Simpan info ke session untuk ditampilkan di form bayar
         session([
@@ -140,10 +141,12 @@ class TransaksiController extends Controller
         $transaksi = TbTransaksi::with(['kendaraan', 'tarif', 'area'])->findOrFail($id);
 
         // Hitung ulang biaya saat ini
-        $durasi = session('bayar_durasi') ?? max(1, ceil($transaksi->waktu_masuk->diffInMinutes(now()) / 60));
-        $biaya  = session('bayar_biaya')  ?? ($durasi * $transaksi->tarif->tarif_per_jam);
+        $durasi = session('bayar_durasi') ?? BiayaHelper::hitungDurasi($transaksi->waktu_masuk, now());
+        $biaya  = session('bayar_biaya')  ?? BiayaHelper::hitungBiaya($durasi, $transaksi->tarif->tarif_per_jam);
 
-        return view('petugas.transaksi.bayar', compact('transaksi', 'durasi', 'biaya'));
+        $capHarian = BiayaHelper::capHarian($transaksi->tarif->tarif_per_jam);
+
+        return view('petugas.transaksi.bayar', compact('transaksi', 'durasi', 'biaya', 'capHarian'));
     }
 
     public function prosesBayar(Request $request, $id)
@@ -153,8 +156,8 @@ class TransaksiController extends Controller
         ]);
 
         $transaksi   = TbTransaksi::with(['kendaraan', 'tarif', 'area'])->findOrFail($id);
-        $durasi      = session('bayar_durasi', max(1, ceil($transaksi->waktu_masuk->diffInMinutes(now()) / 60)));
-        $biaya       = session('bayar_biaya',  $durasi * $transaksi->tarif->tarif_per_jam);
+        $durasi      = session('bayar_durasi', BiayaHelper::hitungDurasi($transaksi->waktu_masuk, now()));
+        $biaya       = session('bayar_biaya',  BiayaHelper::hitungBiaya($durasi, $transaksi->tarif->tarif_per_jam));
         $jumlahBayar = (float) $request->jumlah_bayar;
 
         if ($jumlahBayar < $biaya) {
