@@ -2,54 +2,60 @@
 
 namespace App\Helpers;
 
-use App\Models\TbTarif;
-
 class BiayaHelper
 {
     /**
-     * Konstanta: cap harian = berapa kali lipat tarif per jam.
-     * Default 12 → artinya maksimal bayar setara 12 jam per hari.
-     * Misal motor Rp 2.000/jam → cap = Rp 24.000/hari.
-     * Misal mobil Rp 5.000/jam → cap = Rp 60.000/hari.
+     * Hitung biaya parkir progresif dengan cap harian.
+     *
+     * Logika per 24 jam:
+     *   - Jam ke-1          : tarif_jam1
+     *   - Jam ke-2 dst      : tarif_lanjut per jam
+     *   - Total tidak boleh melebihi maks_harian
+     *
+     * Jika durasi > 24 jam:
+     *   - Setiap 24 jam dihitung sebagai 1 hari penuh (= maks_harian)
+     *   - Sisa jam dihitung ulang dengan tarif progresif (tetap dibatasi maks_harian)
+     *
+     * Untuk jenis 'lainnya' (tidak ada di config):
+     *   - Fallback: tarif_per_jam × jam, cap = tarif_per_jam × 12
+     *
+     * @param  int    $durasiJam    Durasi parkir dalam jam (min 1)
+     * @param  string $jenisKendaraan
+     * @param  float  $tarifPerJam  Dari tb_tarif (dipakai untuk fallback)
+     * @return float  Total biaya
      */
-    const CAP_JAM = 12;
-
-    /**
-     * Hitung biaya parkir dengan cap harian.
-     *
-     * Logika:
-     * - 1 "hari parkir" = 24 jam
-     * - Biaya per hari tidak boleh melebihi (tarif_per_jam × CAP_JAM)
-     * - Untuk sisa jam di hari terakhir, dihitung normal tapi tidak melebihi cap
-     *
-     * Contoh motor Rp 2.000/jam, cap = 12 jam = Rp 24.000/hari:
-     *   - 3 jam  → 3 × 2.000 = Rp 6.000
-     *   - 12 jam → 12 × 2.000 = Rp 24.000 (sudah cap)
-     *   - 15 jam → cap 1 hari = Rp 24.000 (tidak naik lagi)
-     *   - 25 jam → 1 hari penuh (Rp 24.000) + 1 jam (Rp 2.000) = Rp 26.000
-     *   - 36 jam → 1 hari penuh (Rp 24.000) + 12 jam (Rp 24.000) = Rp 48.000
-     *
-     * @param  int|float  $durasiJam   Durasi parkir dalam jam (sudah dibulatkan ke atas)
-     * @param  float      $tarifPerJam Tarif per jam dari tb_tarif
-     * @return float      Total biaya
-     */
-    public static function hitungBiaya(float $durasiJam, float $tarifPerJam): float
+    public static function hitungBiaya(int $durasiJam, string $jenisKendaraan, float $tarifPerJam): float
     {
-        $capHarian   = $tarifPerJam * self::CAP_JAM;
-        $jamPerHari  = 24;
+        $config = config('tarif_parkir.' . $jenisKendaraan);
 
-        // Berapa hari penuh
-        $hariPenuh   = (int) floor($durasiJam / $jamPerHari);
-        // Sisa jam setelah hari penuh
-        $sisaJam     = $durasiJam % $jamPerHari;
+        // Fallback untuk 'lainnya' atau jenis tidak dikenal
+        if (!$config) {
+            $cap   = $tarifPerJam * 12;
+            $biaya = $durasiJam * $tarifPerJam;
+            // Hitung per hari dengan cap
+            $hariPenuh  = (int) floor($durasiJam / 24);
+            $sisaJam    = $durasiJam % 24;
+            $biayaSisa  = min($sisaJam * $tarifPerJam, $cap);
+            return ($hariPenuh * $cap) + $biayaSisa;
+        }
 
-        // Biaya hari penuh (masing-masing kena cap)
-        $biayaHariPenuh = $hariPenuh * $capHarian;
+        $tarif1    = (float) $config['tarif_jam1'];
+        $tarifNext = (float) $config['tarif_lanjut'];
+        $maksHari  = (float) $config['maks_harian'];
 
-        // Biaya sisa jam (tidak boleh melebihi cap harian)
-        $biayaSisa = min($sisaJam * $tarifPerJam, $capHarian);
+        // Hitung biaya untuk N jam (dalam 1 hari, max 24 jam)
+        $hitungSatuPeriode = function (int $jam) use ($tarif1, $tarifNext, $maksHari): float {
+            if ($jam <= 0) return 0;
+            $biaya = $tarif1 + max(0, $jam - 1) * $tarifNext;
+            return min($biaya, $maksHari);
+        };
 
-        return $biayaHariPenuh + $biayaSisa;
+        $hariPenuh = (int) floor($durasiJam / 24);
+        $sisaJam   = $durasiJam % 24;
+
+        $total = ($hariPenuh * $maksHari) + $hitungSatuPeriode($sisaJam);
+
+        return $total;
     }
 
     /**
@@ -61,10 +67,33 @@ class BiayaHelper
     }
 
     /**
-     * Return cap harian dalam rupiah untuk ditampilkan di UI
+     * Ambil batas maksimal harian untuk ditampilkan di UI
      */
-    public static function capHarian(float $tarifPerJam): float
+    public static function getMaksHarian(string $jenisKendaraan, float $tarifPerJam): float
     {
-        return $tarifPerJam * self::CAP_JAM;
+        $config = config('tarif_parkir.' . $jenisKendaraan);
+        return $config ? (float) $config['maks_harian'] : $tarifPerJam * 12;
+    }
+
+    /**
+     * Ambil info tarif lengkap untuk ditampilkan di UI
+     */
+    public static function getInfoTarif(string $jenisKendaraan, float $tarifPerJam): array
+    {
+        $config = config('tarif_parkir.' . $jenisKendaraan);
+        if ($config) {
+            return [
+                'jam1'       => $config['tarif_jam1'],
+                'lanjut'     => $config['tarif_lanjut'],
+                'maks_harian'=> $config['maks_harian'],
+                'progresif'  => true,
+            ];
+        }
+        return [
+            'jam1'       => $tarifPerJam,
+            'lanjut'     => $tarifPerJam,
+            'maks_harian'=> $tarifPerJam * 12,
+            'progresif'  => false,
+        ];
     }
 }

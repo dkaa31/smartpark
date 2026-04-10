@@ -58,10 +58,13 @@
                     <div id="totalBiaya" style="font-size:2rem;font-weight:700;color:#1e3a8a;">
                         Rp {{ number_format($biaya, 0, ',', '.') }}
                     </div>
-                    <div style="font-size:.72rem;color:#6b7280;margin-top:2px;">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Maks. Rp {{ number_format($capHarian, 0, ',', '.') }}/hari
-                        ({{ $durasi }} jam parkir)
+                    <div style="font-size:.72rem;color:#6b7280;margin-top:4px;">
+                        {{ $durasi }} jam parkir &bull;
+                        @if($infoTarif['progresif'])
+                            Jam 1: Rp {{ number_format($infoTarif['jam1'], 0, ',', '.') }} &bull;
+                            Lanjut: Rp {{ number_format($infoTarif['lanjut'], 0, ',', '.') }}/jam &bull;
+                        @endif
+                        Maks. <strong>Rp {{ number_format($capHarian, 0, ',', '.') }}</strong>/hari
                     </div>
                 </div>
 

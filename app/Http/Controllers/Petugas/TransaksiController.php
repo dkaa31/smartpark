@@ -123,7 +123,11 @@ class TransaksiController extends Controller
 
         $waktuKeluar = now();
         $durasi      = BiayaHelper::hitungDurasi($transaksi->waktu_masuk, $waktuKeluar);
-        $biaya       = BiayaHelper::hitungBiaya($durasi, $transaksi->tarif->tarif_per_jam);
+        $biaya       = BiayaHelper::hitungBiaya(
+            $durasi,
+            $transaksi->kendaraan->jenis_kendaraan,
+            $transaksi->tarif->tarif_per_jam
+        );
 
         // Simpan info ke session untuk ditampilkan di form bayar
         session([
@@ -142,11 +146,19 @@ class TransaksiController extends Controller
 
         // Hitung ulang biaya saat ini
         $durasi = session('bayar_durasi') ?? BiayaHelper::hitungDurasi($transaksi->waktu_masuk, now());
-        $biaya  = session('bayar_biaya')  ?? BiayaHelper::hitungBiaya($durasi, $transaksi->tarif->tarif_per_jam);
+        $biaya  = session('bayar_biaya')  ?? BiayaHelper::hitungBiaya(
+            $durasi,
+            $transaksi->kendaraan->jenis_kendaraan,
+            $transaksi->tarif->tarif_per_jam
+        );
 
-        $capHarian = BiayaHelper::capHarian($transaksi->tarif->tarif_per_jam);
+        $infoTarif = BiayaHelper::getInfoTarif(
+            $transaksi->kendaraan->jenis_kendaraan,
+            $transaksi->tarif->tarif_per_jam
+        );
+        $capHarian = $infoTarif['maks_harian'];
 
-        return view('petugas.transaksi.bayar', compact('transaksi', 'durasi', 'biaya', 'capHarian'));
+        return view('petugas.transaksi.bayar', compact('transaksi', 'durasi', 'biaya', 'capHarian', 'infoTarif'));
     }
 
     public function prosesBayar(Request $request, $id)
@@ -157,7 +169,11 @@ class TransaksiController extends Controller
 
         $transaksi   = TbTransaksi::with(['kendaraan', 'tarif', 'area'])->findOrFail($id);
         $durasi      = session('bayar_durasi', BiayaHelper::hitungDurasi($transaksi->waktu_masuk, now()));
-        $biaya       = session('bayar_biaya',  BiayaHelper::hitungBiaya($durasi, $transaksi->tarif->tarif_per_jam));
+        $biaya       = session('bayar_biaya',  BiayaHelper::hitungBiaya(
+            $durasi,
+            $transaksi->kendaraan->jenis_kendaraan,
+            $transaksi->tarif->tarif_per_jam
+        ));
         $jumlahBayar = (float) $request->jumlah_bayar;
 
         if ($jumlahBayar < $biaya) {
